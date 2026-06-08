@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0B0E0F" />
+<title>EDGE CITY // ASSASSIN</title>
+<meta name="description" content="A community game of Senior Assassin for Edge Esmeralda. The Network is live." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+/* ============================================================
+   EDGE CITY // ASSASSIN — single-file frontend
+   Theme tokens are written from CONFIG.theme at runtime, but the
+   defaults below match CONFIG so the page looks right with no JS.
+   ============================================================ */
+:root{
+  --bg:#0B0E0F;
+  --panel:#121617;
+  --panel2:#171C1E;
+  --text:#F4F1EA;
+  --muted:#8A918D;
+  --faint:#5A615D;
+  --accent:#E0531D;        /* volcano / burnt orange */
+  --accent-glow:#FF7A3D;   /* ember */
+  --line:rgba(244,241,234,0.08);
+  --line-strong:rgba(244,241,234,0.16);
+  --alive:#9FE870;
+  --danger:#E0531D;
+  --ash:#6A6157;
+  --radius:14px;
+  --mono:'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sans:'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  --maxw:1080px;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--sans);
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+  min-height:100vh;
+}
+/* dotted grid + scanline atmosphere */
+body::before{
+  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:radial-gradient(var(--line) 1px, transparent 1px);
+  background-size:26px 26px;
+  -webkit-mask-image:radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 80%);
+  mask-image:radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 80%);
+  opacity:.6;
+}
+body::after{
+  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg, rgba(0,0,0,0) 0 2px, rgba(0,0,0,0.18) 3px);
+  opacity:.25;mix-blend-mode:overlay;
+}
+a{color:inherit}
+button{font-family:inherit}
+.mono{font-family:var(--mono);letter-spacing:.02em}
+
+/* ---------- layout ---------- */
+.wrap{position:relative;z-index:1;max-width:var(--maxw);margin:0 auto;padding:0 18px 80px}
+header.top{
+  position:sticky;top:0;z-index:50;
+  background:linear-gradient(180deg, rgba(11,14,15,.96), rgba(11,14,15,.78));
+  backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);
+}
+.top-inner{max-width:var(--maxw);margin:0 auto;padding:12px 18px;display:flex;align-items:center;gap:14px}
+.lockup{display:flex;align-items:center;gap:10px;text-decoration:none;min-width:0}
+.crosshair{width:22px;height:22px;flex:0 0 auto;position:relative}
+.crosshair::before,.crosshair::after{content:"";position:absolute;background:var(--accent)}
+.crosshair::before{left:50%;top:0;width:1.5px;height:100%;transform:translateX(-50%)}
+.crosshair::after{top:50%;left:0;height:1.5px;width:100%;transform:translateY(-50%)}
+.crosshair span{position:absolute;inset:3px;border:1.5px solid var(--accent);border-radius:50%}
+.brand{font-weight:800;font-size:14px;letter-spacing:.14em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand .slash{color:var(--accent)}
+@media(max-width:520px){.brand{display:none}}
+nav.tabs{margin-left:auto;display:flex;gap:4px;align-items:center}
+nav.tabs a{
+  font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);text-decoration:none;padding:8px 10px;border-radius:8px;border:1px solid transparent;
+}
+nav.tabs a:hover{color:var(--text);background:var(--panel)}
+nav.tabs a.active{color:var(--text);border-color:var(--line-strong);background:var(--panel)}
+.sound-btn{
+  margin-left:6px;background:var(--panel);border:1px solid var(--line);color:var(--muted);
+  width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:14px;display:grid;place-items:center;
+}
+.sound-btn:hover{color:var(--text);border-color:var(--line-strong)}
+
+/* ---------- generic bits ---------- */
+.view{display:none;animation:fade .35s ease}
+.view.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--accent)}
+h1.hero{font-size:clamp(34px,7vw,64px);line-height:.98;font-weight:800;letter-spacing:-.02em;margin:10px 0 8px}
+h1.hero .slash{color:var(--accent)}
+.tagline{color:var(--muted);max-width:60ch;font-size:15px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius)}
+.section-title{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 12px;display:flex;align-items:center;gap:8px}
+.section-title::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent)}
+.grid2{display:grid;grid-template-columns:1fr;gap:18px}
+@media(min-width:860px){.grid2{grid-template-columns:1.15fr .85fr}}
+
+/* status tag */
+.tag{font-family:var(--mono);font-size:11px;letter-spacing:.06em;padding:3px 8px;border-radius:999px;border:1px solid var(--line-strong);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.tag.alive{color:var(--alive)}
+.tag.alive .dot{width:7px;height:7px;border-radius:50%;background:var(--alive);box-shadow:0 0 8px var(--alive)}
+.tag.dead{color:var(--ash);text-decoration:none}
+.tag.dead .dot{color:var(--ash)}
+
+/* counter */
+.counter-card{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:22px 24px;margin:26px 0 22px;overflow:hidden;position:relative}
+.counter-card .label{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.counter-num{font-family:var(--mono);font-weight:700;font-size:clamp(46px,12vw,88px);line-height:1;color:var(--text);transition:color .3s}
+.counter-num.flash{color:var(--accent);text-shadow:0 0 26px var(--accent-glow)}
+.counter-sub{font-size:13px;color:var(--faint);margin-top:4px}
+.ring-deco{position:absolute;right:-40px;top:50%;transform:translateY(-50%);width:200px;height:200px;border:1px solid var(--line);border-radius:50%;opacity:.5}
+.ring-deco::after{content:"";position:absolute;inset:34px;border:1px solid var(--line);border-radius:50%}
+
+/* leaderboard */
+.lb-row{display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid var(--line)}
+.lb-row:last-child{border-bottom:0}
+.lb-rank{font-family:var(--mono);font-size:13px;color:var(--faint);width:26px;flex:0 0 auto;text-align:right}
+.lb-row.top .lb-rank{color:var(--accent)}
+.avatar{width:38px;height:38px;border-radius:9px;object-fit:cover;background:var(--panel2);flex:0 0 auto;border:1px solid var(--line)}
+.avatar.ph{display:grid;place-items:center;color:var(--faint);font-family:var(--mono);font-size:14px}
+.lb-name{font-weight:600;min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lb-name small{display:block;font-weight:400;color:var(--faint);font-family:var(--mono);font-size:11px}
+.lb-kills{font-family:var(--mono);font-weight:700;font-size:15px}
+.lb-kills small{color:var(--faint);font-weight:400;font-size:11px;margin-left:3px}
+.lb-row.eliminated{opacity:.45}
+.lb-row.eliminated .lb-name{text-decoration:line-through;text-decoration-color:var(--ash)}
+
+/* feed */
+.feed{max-height:560px;overflow:auto}
+.feed-item{padding:13px 14px;border-bottom:1px solid var(--line);display:flex;gap:11px}
+.feed-item:last-child{border-bottom:0}
+.feed-item.fresh{animation:freshIn .6s ease}
+@keyframes freshIn{from{background:rgba(224,83,29,.16)}to{background:transparent}}
+.feed-mark{flex:0 0 auto;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-top:7px;box-shadow:0 0 8px var(--accent)}
+.feed-item.system .feed-mark{background:var(--muted);box-shadow:none}
+.feed-body{min-width:0}
+.feed-msg{font-size:14px}
+.feed-msg b{color:var(--text)}
+.feed-meta{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:3px;letter-spacing:.04em}
+
+/* rules */
+.rule{display:flex;gap:14px;padding:16px 0;border-top:1px solid var(--line)}
+.rule:first-child{border-top:0}
+.rule .num{font-family:var(--mono);color:var(--accent);font-size:13px;flex:0 0 auto;width:30px}
+.rule h4{margin:0 0 4px;font-size:15px}
+.rule p{margin:0;color:var(--muted);font-size:14px}
+.rule p b{color:var(--text)}
+
+/* daily directives */
+.directives-panel{padding:18px;margin-bottom:18px;border-color:rgba(224,83,29,.45)}
+.directive{display:flex;gap:13px;padding:13px 0;border-top:1px solid var(--line)}
+.directive:first-of-type{border-top:0}
+.d-flag{flex:0 0 auto;font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--bg);background:var(--accent);border-radius:5px;padding:3px 6px;height:max-content;margin-top:2px}
+.d-flag.old{background:transparent;color:var(--faint);border:1px solid var(--line-strong)}
+.d-body{min-width:0;flex:1}
+.d-title{font-weight:700;font-size:15px;letter-spacing:-.01em}
+.d-text{color:var(--muted);font-size:14px;margin-top:3px}
+.d-meta{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:5px;letter-spacing:.04em}
+.d-remove{flex:0 0 auto;background:transparent;border:1px solid var(--line-strong);color:var(--muted);border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;height:max-content;margin-top:2px}
+.d-remove:hover{border-color:var(--accent);color:var(--accent)}
+
+/* buttons & inputs */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;border-radius:10px;border:1px solid var(--line-strong);background:var(--panel2);color:var(--text);font-weight:600;font-size:14px;padding:12px 18px;text-decoration:none;transition:.15s}
+.btn:hover{border-color:var(--accent)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#160a04}
+.btn.primary:hover{background:var(--accent-glow);border-color:var(--accent-glow)}
+.btn.ghost{background:transparent}
+.btn.danger{border-color:var(--accent);color:var(--accent)}
+.btn.block{display:flex;width:100%}
+.btn.big{padding:16px 20px;font-size:16px;letter-spacing:.02em}
+.input{width:100%;background:var(--bg);border:1px solid var(--line-strong);color:var(--text);border-radius:10px;padding:13px 14px;font-family:var(--mono);font-size:15px;letter-spacing:.12em;text-transform:uppercase}
+.input::placeholder{color:var(--faint);letter-spacing:.06em;text-transform:none}
+.input:focus{outline:none;border-color:var(--accent)}
+.input.text{font-family:var(--sans);text-transform:none;letter-spacing:normal;font-size:15px}
+textarea.input{resize:vertical;min-height:64px;line-height:1.45}
+.field-label{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block}
+
+/* dashboard / dossier */
+.center-card{max-width:440px;margin:40px auto;padding:26px}
+.dossier{position:relative;padding:22px;overflow:hidden}
+.dossier::before{content:"CLASSIFIED";position:absolute;top:14px;right:-30px;transform:rotate(35deg);font-family:var(--mono);font-size:11px;letter-spacing:.3em;color:var(--accent);opacity:.5;border:1px solid var(--accent);padding:3px 34px}
+.dossier-head{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.dossier-head::before{content:"▣";color:var(--accent)}
+.dossier-body{display:flex;gap:18px;align-items:flex-start}
+.dossier-photo{width:120px;height:148px;border-radius:10px;object-fit:cover;background:var(--panel2);border:1px solid var(--line-strong);flex:0 0 auto;filter:contrast(1.05) saturate(.9)}
+.dossier-photo.ph{display:grid;place-items:center;color:var(--faint);font-family:var(--mono);font-size:28px}
+.dossier-redacted{width:120px;height:148px;border-radius:10px;flex:0 0 auto;border:1px dashed var(--line-strong);background:repeating-linear-gradient(45deg,var(--panel2) 0 9px,rgba(224,83,29,.07) 9px 18px);display:grid;place-content:center;align-items:center;text-align:center;color:var(--faint);font-family:var(--mono);font-size:10px;letter-spacing:.14em;line-height:1.5;padding:8px}
+.dossier-redacted .x{font-size:26px;color:var(--accent);opacity:.75;margin-bottom:4px}
+.dossier-codename{font-size:24px;font-weight:800;letter-spacing:-.01em;line-height:1.1}
+.dossier-real{color:var(--muted);font-size:14px;margin-top:2px}
+.intel{margin-top:14px;border-top:1px dashed var(--line-strong);padding-top:12px}
+.intel-row{display:flex;justify-content:space-between;gap:10px;font-family:var(--mono);font-size:13px;padding:5px 0}
+.intel-row .k{color:var(--faint);letter-spacing:.08em}
+.intel-row .v{color:var(--text);text-align:right;word-break:break-word}
+.intel-row .v a{color:var(--accent-glow);text-decoration:none}
+
+.mini-stats{display:flex;gap:10px;margin:18px 0}
+.stat{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.stat .n{font-family:var(--mono);font-weight:700;font-size:22px}
+.stat .l{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-top:2px}
+
+.notice{border-radius:10px;padding:12px 14px;font-size:14px;border:1px solid var(--line-strong);background:var(--panel2)}
+.notice.warn{border-color:rgba(224,83,29,.5);color:var(--accent-glow);background:rgba(224,83,29,.08)}
+.notice.good{border-color:rgba(159,232,112,.4);color:var(--alive);background:rgba(159,232,112,.06)}
+.muted-link{display:inline-block;margin-top:8px;font-family:var(--mono);font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline}
+
+/* roster table */
+.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:var(--radius)}
+table.roster{width:100%;border-collapse:collapse;font-size:13px;min-width:640px}
+table.roster th,table.roster td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.roster th{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);position:sticky;top:0;background:var(--panel)}
+table.roster td.mono,table.roster .copy{font-family:var(--mono)}
+.copy{cursor:pointer;color:var(--accent-glow);text-decoration:underline}
+.adminbar{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0}
+
+/* modal */
+.modal-bg{position:fixed;inset:0;z-index:100;background:rgba(5,7,8,.78);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:20px}
+.modal-bg.open{display:flex}
+.modal{max-width:440px;width:100%;padding:24px;animation:fade .25s ease}
+.modal h3{margin:0 0 6px;font-size:20px}
+.modal .reminder{margin:14px 0;font-size:13px;color:var(--muted);border-left:2px solid var(--accent);padding:8px 0 8px 12px}
+.modal .reminder b{color:var(--text)}
+.modal-actions{display:flex;gap:10px;margin-top:18px}
+.modal-actions .btn{flex:1}
+
+/* toasts */
+.toasts{position:fixed;z-index:200;top:70px;right:16px;display:flex;flex-direction:column;gap:10px;max-width:360px;pointer-events:none}
+@media(max-width:560px){.toasts{left:12px;right:12px;max-width:none}}
+.toast{pointer-events:auto;background:var(--panel);border:1px solid var(--accent);border-left-width:4px;border-radius:10px;padding:12px 14px;box-shadow:0 12px 30px rgba(0,0,0,.5);animation:toastIn .4s cubic-bezier(.2,.9,.3,1.2)}
+.toast .t-title{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-bottom:3px}
+.toast .t-msg{font-size:13px}
+@keyframes toastIn{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+.toast.out{animation:toastOut .35s ease forwards}
+@keyframes toastOut{to{opacity:0;transform:translateX(30px)}}
+
+/* big states */
+.bigstate{text-align:center;padding:60px 20px}
+.bigstate .icon{font-size:42px}
+.bigstate h2{font-size:clamp(26px,5vw,40px);margin:10px 0 6px;letter-spacing:-.01em}
+.bigstate p{color:var(--muted);max-width:46ch;margin:0 auto}
+.winner-name{color:var(--accent);text-shadow:0 0 30px var(--accent-glow)}
+.confetti{position:fixed;top:-10px;width:9px;height:14px;z-index:150;opacity:.9;border-radius:2px;pointer-events:none}
+
+.skeleton{color:var(--faint);font-family:var(--mono);font-size:13px;padding:20px;text-align:center}
+.spacer{height:26px}
+footer{margin-top:50px;padding-top:20px;border-top:1px solid var(--line);color:var(--faint);font-family:var(--mono);font-size:11px;letter-spacing:.06em;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.err{color:var(--accent);font-size:13px;margin-top:8px;min-height:18px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <a class="lockup" href="#feed" aria-label="Edge City Assassin home">
+      <span class="crosshair" aria-hidden="true"><span></span></span>
+      <span class="brand">EDGE CITY <span class="slash">//</span> ASSASSIN</span>
+    </a>
+    <nav class="tabs" aria-label="Primary">
+      <a href="#feed" data-tab="feed">Feed</a>
+      <a href="#me" data-tab="me">Dashboard</a>
+      <a href="#admin" data-tab="admin">Admin</a>
+    </nav>
+    <button class="sound-btn" id="soundBtn" title="Toggle alert sound" aria-label="Toggle alert sound">♪</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ============ FEED / PUBLIC HOME ============ -->
+  <section class="view" id="view-feed" role="region" aria-label="Public feed">
+    <div class="spacer"></div>
+    <div class="eyebrow">Edge Esmeralda · Healdsburg · The Network is live</div>
+    <h1 class="hero">EDGE CITY <span class="slash">//</span> ASSASSIN</h1>
+    <p class="tagline" id="heroTag">One ring. One mark each — and no photos, so you hunt by codename alone. The three-finger bracelet touch is the only kill that counts, unless your Mark escapes with a poem. New directives drop daily. Last agent standing takes the village.</p>
+
+    <div class="panel counter-card">
+      <div>
+        <div class="label">Agents Remaining</div>
+        <div class="counter-num mono" id="counter">—</div>
+        <div class="counter-sub" id="counterSub">awaiting signal…</div>
+      </div>
+      <div class="ring-deco" aria-hidden="true"></div>
+    </div>
+
+    <div id="feedStateBanner"></div>
+    <div id="directivesPanel"></div>
+
+    <div class="grid2">
+      <div class="panel" style="padding:18px">
+        <div class="section-title">Live Elimination Feed</div>
+        <div class="feed" id="feed"><div class="skeleton">Establishing uplink…</div></div>
+      </div>
+      <div>
+        <div class="panel" style="padding:18px">
+          <div class="section-title">Leaderboard</div>
+          <div id="leaderboard"><div class="skeleton">Loading agents…</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+    <div class="panel" style="padding:22px 22px 6px">
+      <div class="section-title">Ground Rules · Field Protocol</div>
+      <div class="rule">
+        <div class="num">01</div>
+        <div>
+          <h4>The Touch — three fingers, one bracelet.</h4>
+          <p>A Mark is neutralized only when their assassin lays a <b>three-finger touch on the target's Edge City bracelet</b>. No water guns, no spoons, no proxies — the bracelet touch is the single canonical kill. Land it, then log it here to inherit your next Mark.</p>
+        </div>
+      </div>
+      <div class="rule">
+        <div class="num">02</div>
+        <div>
+          <h4>Poetic License — the poem defense.</h4>
+          <p>A Mark may invoke <b>Poetic License</b>: when approached, deliver a poem <b>aloud, performed theatrically and in an accent that fits its theme</b> (a gothic verse in a brooding Transylvanian voice; a sea shanty in a gruff sailor's brogue). Pull it off and the touch is <b>void</b> — you survive that encounter. A flat, mumbled, or theme-mismatched reading earns nothing. The assassin is the on-the-spot judge; disputes go to the admin.</p>
+        </div>
+      </div>
+      <div class="rule">
+        <div class="num">03</div>
+        <div>
+          <h4>Log it honestly.</h4>
+          <p>The eliminator <b>self-reports the valid kill here immediately</b>. The system reassigns your next Mark and broadcasts the hit to the whole village. The admin can reverse a mistaken or disputed entry.</p>
+        </div>
+      </div>
+      <div class="rule">
+        <div class="num">04</div>
+        <div>
+          <h4>Daily Directives — the rules keep changing.</h4>
+          <p>Every day, fresh <b>field directives</b> drop from command: new ways to stay safe or get burned (a passphrase you must answer, a zone that's off-limits, a gesture that grants immunity). They appear pinned at the top of this page and on your dashboard, and <b>ping every agent the instant they're issued</b>. Miss one and you're exposed — check back daily.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DASHBOARD ============ -->
+  <section class="view" id="view-me" role="region" aria-label="Agent dashboard">
+    <div id="meContent"></div>
+  </section>
+
+  <!-- ============ ADMIN ============ -->
+  <section class="view" id="view-admin" role="region" aria-label="Admin console">
+    <div id="adminContent"></div>
+  </section>
+
+  <footer>
+    <span>EDGE CITY <span style="color:var(--accent)">//</span> ASSASSIN — field-ops build</span>
+    <span id="connState">● connecting</span>
+  </footer>
+</div>
+
+<!-- confirm modal -->
+<div class="modal-bg" id="modalBg" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="panel modal" id="modal"></div>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
+
+<script>
+/* ============================================================
+   CONFIG — retheme & rewire from here. Nothing else should need edits.
+   ============================================================ */
+const CONFIG = {
+  // Paste your Apps Script Web App /exec URL here (see SETUP.md).
+  apiUrl: 'https://script.google.com/macros/s/AKfycbwzXwr1tBcKKLRlyn6DC0r1lx3IXFbdLeME7Z0R78XB_D_aZnLfFaKaM1zTPD0PVH8M/exec',
+
+  pollSeconds: 12,
+
+  // MUST match REQUIRE_VICTIM_CONFIRMATION in Code.gs. Default: off (frictionless).
+  requireVictimConfirmation: false,
+
+  features: {
+    sound: true,    // alert blip when a new kill lands
+    toasts: true,   // pop-up banners for new kills
+    confetti: true  // celebratory finish for the winner
+  },
+
+  theme: {
+    bg:'#0B0E0F', panel:'#121617', text:'#F4F1EA', muted:'#8A918D',
+    accent:'#E0531D',        // volcano / burnt orange
+    accentGlow:'#FF7A3D',    // ember
+    alive:'#9FE870'
+  },
+
+  copy: {
+    brand: 'EDGE CITY // ASSASSIN',
+    tagline: "One ring. One mark each — and no photos, so you hunt by codename alone. The three-finger bracelet touch is the only kill that counts, unless your Mark escapes with a poem. New directives drop daily. Last agent standing takes the village.",
+    directiveToast: 'NEW DIRECTIVE'
+  }
+};
+
+/* ---------- apply theme + copy ---------- */
+(function applyConfig(){
+  const t = CONFIG.theme, r = document.documentElement.style;
+  if(t.bg) r.setProperty('--bg', t.bg);
+  if(t.panel) r.setProperty('--panel', t.panel);
+  if(t.text) r.setProperty('--text', t.text);
+  if(t.muted) r.setProperty('--muted', t.muted);
+  if(t.accent){ r.setProperty('--accent', t.accent); r.setProperty('--danger', t.accent); }
+  if(t.accentGlow) r.setProperty('--accent-glow', t.accentGlow);
+  if(t.alive) r.setProperty('--alive', t.alive);
+  if(CONFIG.copy.tagline){ const el=document.getElementById('heroTag'); if(el) el.textContent=CONFIG.copy.tagline; }
+})();
+
+/* ============================================================
+   API — "simple" requests only (no custom headers) so the browser
+   never sends a CORS preflight that Apps Script can't answer.
+   ============================================================ */
+async function api(action, params){
+  params = params || {};
+  if(!CONFIG.apiUrl || CONFIG.apiUrl.indexOf('PASTE_') === 0){
+    throw new Error('CONFIG.apiUrl is not set. Paste your Apps Script Web App URL into index.html.');
+  }
+  const res = await fetch(CONFIG.apiUrl, {
+    method:'POST',
+    redirect:'follow',
+    body: JSON.stringify(Object.assign({ action }, params)) // string body => text/plain => no preflight
+  });
+  let data;
+  try { data = await res.json(); }
+  catch(e){ throw new Error('Bad response from server (check the deployment URL & access setting).'); }
+  if(!data.ok) throw new Error(data.error || 'Request failed.');
+  return data;
+}
+
+/* ============================================================
+   Small helpers
+   ============================================================ */
+const $ = (s, r) => (r||document).querySelector(s);
+const $$ = (s, r) => Array.from((r||document).querySelectorAll(s));
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function initials(name){ return String(name||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase() || '?'; }
+function timeAgo(iso){
+  if(!iso) return '';
+  const d = new Date(iso); if(isNaN(d)) return '';
+  const s = Math.floor((Date.now()-d.getTime())/1000);
+  if(s<30) return 'just now';
+  if(s<60) return s+'s ago';
+  const m = Math.floor(s/60); if(m<60) return m+'m ago';
+  const h = Math.floor(m/60); if(h<24) return h+'h ago';
+  return Math.floor(h/24)+'d ago';
+}
+function avatar(url, name, cls){
+  cls = cls || 'avatar';
+  if(url) return '<img class="'+cls+'" src="'+esc(url)+'" alt="" loading="lazy" onerror="this.outerHTML=\'<div class=\\\''+cls+' ph\\\'>'+esc(initials(name))+'</div>\'">';
+  return '<div class="'+cls+' ph">'+esc(initials(name))+'</div>';
+}
+
+/* Active Directives panel (public + dashboard) */
+function directivesHTML(list){
+  if(!list || !list.length) return '';
+  return '<div class="panel directives-panel">'
+    + '<div class="section-title">Active Directives · Follow or Fall</div>'
+    + list.map(function(d,i){
+        return '<div class="directive">'
+          + '<span class="d-flag'+(i===0?'':' old')+'">'+(i===0?'LATEST':'RULE')+'</span>'
+          + '<div class="d-body"><div class="d-title">'+esc(d.title||'Directive')+'</div>'
+          + (d.text?'<div class="d-text">'+esc(d.text)+'</div>':'')
+          + '<div class="d-meta">issued '+timeAgo(d.timestamp)+'</div></div>'
+          + '</div>';
+      }).join('')
+    + '</div>';
+}
+function getCodeParam(){
+  const u = new URL(location.href);
+  let code = u.searchParams.get('code');
+  if(!code && location.hash.indexOf('?')>=0){
+    code = new URLSearchParams(location.hash.split('?')[1]).get('code');
+  }
+  return code ? code.trim() : '';
+}
+
+/* ============================================================
+   Sound (WebAudio blip, unlocked on first gesture)
+   ============================================================ */
+const Sound = (function(){
+  let ctx=null, enabled = CONFIG.features.sound;
+  function unlock(){ if(!ctx){ try{ ctx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(ctx&&ctx.state==='suspended') ctx.resume(); }
+  function blip(){
+    if(!enabled || !ctx) return;
+    const t = ctx.currentTime;
+    [880, 1320].forEach((f,i)=>{
+      const o=ctx.createOscillator(), g=ctx.createGain();
+      o.type='triangle'; o.frequency.value=f;
+      o.connect(g); g.connect(ctx.destination);
+      const s=t+i*0.09;
+      g.gain.setValueAtTime(0.0001, s);
+      g.gain.exponentialRampToValueAtTime(0.18, s+0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, s+0.18);
+      o.start(s); o.stop(s+0.2);
+    });
+  }
+  function setEnabled(v){ enabled=v; updateBtn(); }
+  function updateBtn(){ const b=$('#soundBtn'); if(b){ b.textContent = enabled?'♪':'♪̸'; b.style.color = enabled?'var(--accent)':'var(--faint)'; } }
+  return { unlock, blip, setEnabled, isEnabled:()=>enabled, updateBtn };
+})();
+document.addEventListener('pointerdown', Sound.unlock, { once:true });
+$('#soundBtn').addEventListener('click', ()=>{ Sound.unlock(); Sound.setEnabled(!Sound.isEnabled()); });
+Sound.updateBtn();
+
+/* ============================================================
+   Toasts
+   ============================================================ */
+function toast(title, msg){
+  if(!CONFIG.features.toasts) return;
+  const wrap = $('#toasts');
+  const el = document.createElement('div');
+  el.className='toast';
+  el.innerHTML = '<div class="t-title">'+esc(title)+'</div><div class="t-msg">'+esc(msg)+'</div>';
+  wrap.appendChild(el);
+  setTimeout(()=>{ el.classList.add('out'); setTimeout(()=>el.remove(), 360); }, 6500);
+}
+
+/* ============================================================
+   Routing
+   ============================================================ */
+const ROUTES = ['feed','me','admin'];
+function currentRoute(){
+  let h = (location.hash||'#feed').replace('#','');
+  if(h.indexOf('?')>=0) h = h.split('?')[0];
+  return ROUTES.indexOf(h)>=0 ? h : 'feed';
+}
+function route(){
+  const r = currentRoute();
+  $$('.view').forEach(v=>v.classList.remove('active'));
+  $('#view-'+r).classList.add('active');
+  $$('nav.tabs a').forEach(a=>a.classList.toggle('active', a.dataset.tab===r));
+  if(r==='me') renderDashboard();
+  if(r==='admin') renderAdmin();
+  if(r==='feed') window.scrollTo({top:0,behavior:'instant'in window?'instant':'auto'});
+}
+window.addEventListener('hashchange', route);
+
+/* ============================================================
+   PUBLIC FEED
+   ============================================================ */
+let pollTimer=null, lastFeedTop=null, feedPrimed=false, lastRemaining=null, gameEndedShown=false;
+let seenDirectiveIds=new Set(), directivesPrimed=false;
+
+async function pollPublic(){
+  try{
+    const s = await api('getPublicState');
+    setConn(true);
+    renderPublic(s);
+  }catch(e){
+    setConn(false, e.message);
+  }
+}
+function setConn(ok, msg){
+  const el=$('#connState');
+  if(!el) return;
+  el.textContent = ok ? '● live' : '● offline';
+  el.style.color = ok ? 'var(--alive)' : 'var(--accent)';
+  el.title = msg||'';
+}
+
+function renderPublic(s){
+  // counter
+  const counter = $('#counter'), sub=$('#counterSub');
+  if(s.gameStatus==='signups'){
+    counter.textContent='—'; sub.textContent='Signups open · The Network has not been seeded yet.';
+  } else {
+    counter.textContent = s.agentsRemaining;
+    sub.textContent = (s.totalAgents? s.totalAgents+' agents entered the field · ':'') + (s.gameStatus==='ended'?'Game over.':'Stay sharp.');
+    if(lastRemaining!==null && s.agentsRemaining!==lastRemaining){
+      counter.classList.add('flash'); setTimeout(()=>counter.classList.remove('flash'),700);
+    }
+  }
+  lastRemaining = s.agentsRemaining;
+
+  // state banner
+  const banner=$('#feedStateBanner');
+  if(s.gameStatus==='signups'){
+    banner.innerHTML='<div class="notice warn" style="margin-bottom:18px">⧗ Recruitment phase. Sign up via the form, then the admin seeds The Network. Your dossier unlocks the moment the game goes live.</div>';
+  } else if(s.gameStatus==='ended'){
+    banner.innerHTML='<div class="notice good" style="margin-bottom:18px">✦ THE NETWORK HAS COLLAPSED — last agent standing: <b>'+esc(s.winner||'—')+'</b>.</div>';
+    if(!gameEndedShown && feedPrimed){ celebrate(s.winner); }
+    gameEndedShown = true;
+  } else {
+    banner.innerHTML='';
+  }
+
+  // daily directives — pin them + alert everyone when a new one drops
+  const dirs = s.directives || [];
+  if(directivesPrimed){
+    let anyNewDir=false;
+    dirs.forEach(d=>{
+      if(!seenDirectiveIds.has(d.id)){
+        anyNewDir=true;
+        const body = (d.title||'') + (d.text ? (d.title?' — ':'')+d.text : '');
+        toast(CONFIG.copy.directiveToast||'New Directive', body);
+      }
+    });
+    if(anyNewDir) Sound.blip();
+  }
+  dirs.forEach(d=> seenDirectiveIds.add(d.id));
+  directivesPrimed = true;
+  $('#directivesPanel').innerHTML = directivesHTML(dirs);
+
+  // leaderboard
+  const lb=$('#leaderboard');
+  if(!s.leaderboard || !s.leaderboard.length){
+    lb.innerHTML='<div class="skeleton">No agents yet.</div>';
+  } else {
+    lb.innerHTML = s.leaderboard.slice(0,12).map((p,i)=>{
+      const dead = p.status==='eliminated';
+      return '<div class="lb-row '+(i===0&&p.kills>0?'top ':'')+(dead?'eliminated':'')+'">'
+        + '<div class="lb-rank">'+(i+1)+'</div>'
+        + avatar(p.photo, p.codename)
+        + '<div class="lb-name">'+esc(p.codename)+'<small>'+(dead?'✕ neutralized':'● active')+'</small></div>'
+        + '<div class="lb-kills">'+p.kills+'<small>kills</small></div>'
+        + '</div>';
+    }).join('');
+  }
+
+  // feed + new-entry detection
+  const feed=$('#feed');
+  const items = s.feed||[];
+  const topKey = items.length ? (items[0].timestamp+'|'+items[0].message) : null;
+  let freshKeys = {};
+  if(feedPrimed && topKey && topKey!==lastFeedTop){
+    // figure out which entries are new since lastFeedTop
+    for(const it of items){
+      const k = it.timestamp+'|'+it.message;
+      if(k===lastFeedTop) break;
+      freshKeys[k]=true;
+      if(it.victim){ toast('Neutralized', it.message); }
+    }
+    if(Object.keys(freshKeys).length){ Sound.blip(); }
+  }
+  feed.innerHTML = items.length ? items.map(it=>{
+    const k = it.timestamp+'|'+it.message;
+    const sys = !it.victim;
+    return '<div class="feed-item '+(sys?'system ':'')+(freshKeys[k]?'fresh':'')+'">'
+      + '<div class="feed-mark"></div>'
+      + '<div class="feed-body"><div class="feed-msg">'+renderMsg(it)+'</div>'
+      + '<div class="feed-meta">'+(it.eliminator?esc(it.eliminator)+' · ':'')+timeAgo(it.timestamp)+'</div></div>'
+      + '</div>';
+  }).join('') : '<div class="skeleton">No activity yet. The field is quiet… for now.</div>';
+
+  lastFeedTop = topKey;
+  feedPrimed = true;
+}
+function renderMsg(it){
+  let m = esc(it.message);
+  if(it.eliminator) m = m.replace(esc(it.eliminator), '<b>'+esc(it.eliminator)+'</b>');
+  if(it.victim) m = m.replace(esc(it.victim), '<b>'+esc(it.victim)+'</b>');
+  return m;
+}
+
+/* ============================================================
+   DASHBOARD
+   ============================================================ */
+let myCode = '';
+function setMyCode(c){ myCode = (c||'').trim(); try{ if(myCode) localStorage.setItem('ec_assassin_code', myCode); }catch(e){} }
+function loadSavedCode(){ try{ return localStorage.getItem('ec_assassin_code')||''; }catch(e){ return ''; } }
+
+function renderDashboard(){
+  const deep = getCodeParam();
+  if(deep) setMyCode(deep);
+  if(!myCode) myCode = loadSavedCode();
+  if(!myCode){ renderCodeGate(); return; }
+  fetchDashboard();
+}
+
+function renderCodeGate(err){
+  $('#meContent').innerHTML =
+    '<div class="panel center-card">'
+    + '<div class="dossier-head">Agent Authentication</div>'
+    + '<h2 style="margin:0 0 6px;font-size:22px">Enter your agent code</h2>'
+    + '<p style="color:var(--muted);font-size:14px;margin:0 0 16px">Your 7-character code was issued when The Network was seeded. Lose it? Ping the admin.</p>'
+    + '<label class="field-label" for="codeInput">Secret Code</label>'
+    + '<input class="input" id="codeInput" maxlength="12" placeholder="e.g. K7M2QXP" autocomplete="off" autocapitalize="characters" spellcheck="false" />'
+    + '<div class="err" id="codeErr">'+(err?esc(err):'')+'</div>'
+    + '<button class="btn primary block big" id="codeGo" style="margin-top:10px">ACCESS DOSSIER →</button>'
+    + '</div>';
+  const input=$('#codeInput'), go=$('#codeGo');
+  input.focus();
+  const submit=()=>{ const v=input.value.trim(); if(!v){ $('#codeErr').textContent='Enter a code.'; return; } setMyCode(v); fetchDashboard(); };
+  go.addEventListener('click', submit);
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter') submit(); });
+}
+
+async function fetchDashboard(){
+  $('#meContent').innerHTML = '<div class="panel center-card"><div class="skeleton">Decrypting dossier…</div></div>';
+  try{
+    const d = await api('getMyDashboard', { secretCode: myCode });
+    renderMe(d);
+  }catch(e){
+    myCode=''; try{ localStorage.removeItem('ec_assassin_code'); }catch(_){}
+    renderCodeGate(e.message);
+  }
+}
+
+function renderMe(d){
+  const me=d.me;
+  const statusTag = me.status==='alive'
+    ? '<span class="tag alive"><span class="dot"></span>ACTIVE</span>'
+    : '<span class="tag dead">✕ NEUTRALIZED</span>';
+
+  let html = '<div class="spacer"></div>'
+    + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
+    + '<div class="eyebrow">Agent Dashboard</div>'+statusTag
+    + '<button class="btn ghost" style="margin-left:auto;font-size:12px;padding:7px 12px" id="logoutBtn">switch agent</button>'
+    + '</div>'
+    + '<h1 class="hero" style="font-size:clamp(28px,6vw,46px);margin:10px 0 4px">'+esc(me.codename)+'</h1>'
+    + '<div class="tagline" style="font-size:14px">'+esc(me.name)+'</div>'
+    + '<div class="mini-stats">'
+    + '<div class="stat"><div class="n">'+me.kills+'</div><div class="l">Confirmed Kills</div></div>'
+    + '<div class="stat"><div class="n mono">'+(me.status==='alive'?'LIVE':'DOWN')+'</div><div class="l">Field Status</div></div>'
+    + '</div>';
+
+  // eliminated state
+  if(me.status==='eliminated'){
+    html += '<div class="panel" style="padding:22px;margin-top:6px">'
+      + '<div class="bigstate" style="padding:24px 10px">'
+      + '<div class="icon">✕</div>'
+      + '<h2>You were neutralized</h2>'
+      + '<p>'+(me.eliminatedByCodename?'Taken out by <b style="color:var(--text)">'+esc(me.eliminatedByCodename)+'</b>. ':'')+'Your run is over — but the feed lives on. Spectate the rest from the public board.</p>'
+      + '<a class="btn ghost" href="#feed" style="margin-top:16px">→ Watch the feed</a>'
+      + '</div></div>';
+    $('#meContent').innerHTML = html;
+    wireDashboard(d);
+    return;
+  }
+
+  // game not active
+  if(d.gameStatus!=='active'){
+    html += '<div class="notice warn">'+(d.gameStatus==='ended'?'The Network has collapsed — the game is over.':'The Network is not live yet. Your Mark unlocks the moment the admin seeds the game. Sit tight, agent.')+'</div>';
+    $('#meContent').innerHTML = html;
+    wireDashboard(d);
+    return;
+  }
+
+  // active daily directives — survival rules in force right now
+  html += directivesHTML(d.directives);
+
+  // pending-by-me notice (victim confirmation flow)
+  if(d.pendingByMe){
+    html += '<div class="notice warn" style="margin-bottom:14px">⧗ Your last neutralization is filed and awaiting your Mark\'s confirmation. The reassignment lands once they confirm.</div>';
+  }
+  // someone is confirming-pending against me
+  if(d.pendingAgainstMe){
+    html += '<div class="panel" style="padding:18px;margin-bottom:14px;border-color:var(--accent)">'
+      + '<div class="section-title" style="margin-bottom:8px">Confirmation Requested</div>'
+      + '<p style="color:var(--muted);font-size:14px;margin:0 0 12px">An assassin has filed a neutralization against you. If the bracelet touch was clean (and you had no poem), confirm it.</p>'
+      + '<button class="btn danger block" id="confirmDeathBtn">CONFIRM MY NEUTRALIZATION</button>'
+      + '</div>';
+  }
+
+  // target dossier
+  if(d.target){
+    const t=d.target;
+    html += '<div class="panel dossier" style="margin-top:6px">'
+      + '<div class="dossier-head">Active Assignment · Your Mark</div>'
+      + '<div class="dossier-body">'
+      + '<div class="dossier-redacted"><div class="x">&#8856;</div>NO VISUAL<br>ON FILE</div>'
+      + '<div style="min-width:0">'
+      + '<div class="dossier-codename">'+esc(t.codename)+'</div>'
+      + '<div class="dossier-real">'+esc(t.name)+'</div>'
+      + '<div class="intel">'
+      + '<div class="intel-row"><span class="k">CODENAME</span><span class="v mono">'+esc(t.codename)+'</span></div>'
+      + '<div class="intel-row"><span class="k">CONTACT</span><span class="v">'+renderContact(t.contact)+'</span></div>'
+      + '<div class="intel-row"><span class="k">METHOD</span><span class="v">3-finger bracelet touch</span></div>'
+      + '</div></div></div>'
+      + '<div style="margin-top:20px">'
+      + '<button class="btn primary block big" id="neutralizeBtn">⊕ CONFIRM NEUTRALIZATION</button>'
+      + '<a class="muted-link" href="#feed">Review the Ground Rules — the bracelet touch & Poetic License →</a>'
+      + '</div></div>';
+  } else {
+    html += '<div class="notice">No active Mark assigned. Refresh in a moment.</div>';
+  }
+
+  $('#meContent').innerHTML = html;
+  wireDashboard(d);
+}
+
+function renderContact(c){
+  if(!c) return '<span class="mono">—</span>';
+  const s = String(c).trim();
+  if(/^https?:\/\//i.test(s)) return '<a href="'+esc(s)+'" target="_blank" rel="noopener">link ↗</a>';
+  if(/^@?[A-Za-z0-9_]{3,}$/.test(s) && s.indexOf(' ')<0 && !s.includes('@gmail') ) {
+    const handle = s.replace(/^@/,'');
+    return '<a href="https://t.me/'+esc(handle)+'" target="_blank" rel="noopener">@'+esc(handle)+'</a>';
+  }
+  if(/@/.test(s) && /\./.test(s)) return '<a href="mailto:'+esc(s)+'">'+esc(s)+'</a>';
+  return '<span class="mono">'+esc(s)+'</span>';
+}
+
+function wireDashboard(d){
+  const lo=$('#logoutBtn');
+  if(lo) lo.addEventListener('click', ()=>{ myCode=''; try{localStorage.removeItem('ec_assassin_code');}catch(_){}
+    if(history.replaceState) history.replaceState(null,'', location.pathname+'#me'); renderCodeGate(); });
+
+  const nb=$('#neutralizeBtn');
+  if(nb) nb.addEventListener('click', ()=> openNeutralizeModal(d.target));
+
+  const cb=$('#confirmDeathBtn');
+  if(cb) cb.addEventListener('click', confirmMyDeath);
+}
+
+function openNeutralizeModal(target){
+  const needCode = CONFIG.requireVictimConfirmation;
+  const codeField = needCode
+    ? '<div style="margin-top:14px"><label class="field-label" for="vcode">Mark\'s confirm code (optional — instant kill)</label>'
+      +'<input class="input" id="vcode" maxlength="12" placeholder="if they hand you their code" autocomplete="off" autocapitalize="characters" /></div>'
+    : '';
+  openModal(
+    '<h3 id="modalTitle">Confirm the neutralization</h3>'
+    + '<p style="color:var(--muted);font-size:14px;margin:6px 0 0">You are reporting a clean elimination of <b style="color:var(--text)">'+esc(target.codename)+'</b>.</p>'
+    + '<div class="reminder">Valid only if you landed a <b>three-finger touch on their bracelet</b> and they did <b>not</b> invoke Poetic License with a theme-fitting poem. False reports get reversed by the admin.</div>'
+    + codeField
+    + '<div class="err" id="modalErr"></div>'
+    + '<div class="modal-actions">'
+    + '<button class="btn ghost" id="mCancel">Stand down</button>'
+    + '<button class="btn primary" id="mConfirm">⊕ Confirm kill</button>'
+    + '</div>'
+  );
+  $('#mCancel').addEventListener('click', closeModal);
+  $('#mConfirm').addEventListener('click', async ()=>{
+    const btn=$('#mConfirm'); btn.disabled=true; btn.textContent='Logging…';
+    try{
+      const params={ secretCode: myCode };
+      if(needCode){ const vc=$('#vcode'); if(vc && vc.value.trim()) params.victimConfirmCode=vc.value.trim(); }
+      const res = await api('reportElimination', params);
+      closeModal();
+      if(res.status==='pending'){
+        toast('Filed','Awaiting your Mark\'s confirmation.');
+      } else {
+        Sound.blip();
+        if(res.ended){ celebrate(res.winner); }
+        else { toast('Neutralized', (res.victimCodename||'Mark')+' is down. New Mark incoming.'); }
+      }
+      fetchDashboard();
+    }catch(e){
+      $('#modalErr').textContent = e.message;
+      btn.disabled=false; btn.textContent='⊕ Confirm kill';
+    }
+  });
+}
+
+async function confirmMyDeath(){
+  const btn=$('#confirmDeathBtn'); btn.disabled=true; btn.textContent='Confirming…';
+  try{
+    await api('confirmElimination', { secretCode: myCode });
+    toast('Confirmed','Your neutralization is on the record. GG, agent.');
+    fetchDashboard();
+  }catch(e){
+    toast('Error', e.message);
+    btn.disabled=false; btn.textContent='CONFIRM MY NEUTRALIZATION';
+  }
+}
+
+/* ============================================================
+   ADMIN
+   ============================================================ */
+let adminCode='';
+
+function directivesAdminHTML(list){
+  const items = (list && list.length)
+    ? list.map((d,i)=>(
+        '<div class="directive">'
+        + '<span class="d-flag'+(i===0?'':' old')+'">'+(i===0?'LATEST':'RULE')+'</span>'
+        + '<div class="d-body"><div class="d-title">'+esc(d.title||'Directive')+'</div>'
+        + (d.text?'<div class="d-text">'+esc(d.text)+'</div>':'')
+        + '<div class="d-meta">issued '+timeAgo(d.timestamp)+'</div></div>'
+        + '<button class="d-remove" data-remove="'+esc(d.id)+'">remove</button>'
+        + '</div>'
+      )).join('')
+    : '<div class="skeleton" style="padding:10px;text-align:left">No directives in force yet. Broadcast one to set today\'s rule.</div>';
+  return '<div class="panel" style="padding:18px;margin:18px 0">'
+    + '<div class="section-title">Daily Directives · Broadcast a new rule</div>'
+    + '<label class="field-label" for="ruleTitle">Directive (short headline)</label>'
+    + '<input class="input text" id="ruleTitle" maxlength="90" placeholder="e.g. PASSPHRASE OF THE DAY" autocomplete="off" />'
+    + '<label class="field-label" for="ruleText" style="margin-top:10px">Details — how to stay safe / what gets you out</label>'
+    + '<textarea class="input text" id="ruleText" rows="2" placeholder="From noon: if your Mark says &quot;edge of tomorrow&quot; before you touch their bracelet, the kill is void for one hour."></textarea>'
+    + '<button class="btn primary" id="btnPostRule" style="margin-top:12px">&#10548; Broadcast to all agents</button>'
+    + '<div class="err" id="ruleErr"></div>'
+    + '<div style="margin-top:8px">'+items+'</div>'
+    + '</div>';
+}
+
+function renderAdmin(){
+  if(!adminCode){ renderAdminGate(); return; }
+  fetchRoster();
+}
+function renderAdminGate(err){
+  $('#adminContent').innerHTML =
+    '<div class="panel center-card">'
+    + '<div class="dossier-head">Restricted · Handler Access</div>'
+    + '<h2 style="margin:0 0 6px;font-size:22px">Admin console</h2>'
+    + '<p style="color:var(--muted);font-size:14px;margin:0 0 16px">Enter the AdminCode (generated by <span class="mono">setup()</span> and stored in the Meta tab).</p>'
+    + '<label class="field-label" for="adminInput">Admin Code</label>'
+    + '<input class="input" id="adminInput" placeholder="admin code" autocomplete="off" />'
+    + '<div class="err" id="adminErr">'+(err?esc(err):'')+'</div>'
+    + '<button class="btn primary block big" id="adminGo" style="margin-top:10px">UNLOCK CONSOLE →</button>'
+    + '</div>';
+  const input=$('#adminInput');
+  input.focus();
+  const submit=()=>{ const v=input.value.trim(); if(!v) return; adminCode=v; fetchRoster(); };
+  $('#adminGo').addEventListener('click', submit);
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter') submit(); });
+}
+
+async function fetchRoster(){
+  $('#adminContent').innerHTML='<div class="panel center-card"><div class="skeleton">Loading roster…</div></div>';
+  try{
+    const d = await api('adminRoster', { adminCode });
+    renderRoster(d);
+  }catch(e){
+    adminCode='';
+    renderAdminGate(e.message);
+  }
+}
+
+function renderRoster(d){
+  const players = d.players||[];
+  const alive = players.filter(p=>p.status==='alive').length;
+  const base = location.origin + location.pathname;
+
+  let html = '<div class="spacer"></div>'
+    + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
+    + '<div class="eyebrow">Handler Console</div>'
+    + '<span class="tag '+(d.gameStatus==='active'?'alive':'dead')+'">'+(d.gameStatus==='active'?'<span class="dot"></span>':'')+esc((d.gameStatus||'').toUpperCase())+'</span>'
+    + '<button class="btn ghost" style="margin-left:auto;font-size:12px;padding:7px 12px" id="adminLogout">lock</button>'
+    + '</div>'
+    + '<h1 class="hero" style="font-size:clamp(26px,5vw,40px);margin:10px 0 2px">The Network</h1>'
+    + '<div class="tagline" style="font-size:14px">'+players.length+' agents · '+alive+' active'+(d.winner?' · winner: <b style="color:var(--accent)">'+esc(d.winner)+'</b>':'')+'</div>'
+    + '<div class="adminbar">'
+    + '<button class="btn primary" id="btnAssign">⚙ Generate Assignments (start)</button>'
+    + '<button class="btn danger" id="btnReverse">↺ Reverse Last Kill</button>'
+    + '<button class="btn ghost" id="btnReset">⨯ Reset Game</button>'
+    + '<button class="btn ghost" id="btnRefresh">⟳ Refresh</button>'
+    + '</div>'
+    + '<div class="err" id="adminMsg"></div>';
+
+  html += directivesAdminHTML(d.directives);
+
+  if(!players.length){
+    html += '<div class="notice warn">No agents imported yet. Collect signups via the Google Form, then hit <b>Generate Assignments</b> to seed The Network from the Form Responses.</div>';
+  } else {
+    html += '<div class="tablewrap"><table class="roster"><thead><tr>'
+      + '<th>#</th><th>Codename</th><th>Name</th><th>Status</th><th>Kills</th><th>Hunting →</th><th>Code</th><th>Dashboard link</th>'
+      + '</tr></thead><tbody>'
+      + players.map((p,i)=>{
+        const link = base + '?code=' + encodeURIComponent(p.secretCode) + '#me';
+        return '<tr>'
+          + '<td class="mono">'+(i+1)+'</td>'
+          + '<td>'+esc(p.codename)+'</td>'
+          + '<td>'+esc(p.name)+'</td>'
+          + '<td>'+(p.status==='alive'?'<span class="tag alive"><span class="dot"></span>active</span>':'<span class="tag dead">✕ down</span>')+'</td>'
+          + '<td class="mono">'+p.kills+'</td>'
+          + '<td>'+esc(p.targetCodename||'—')+'</td>'
+          + '<td class="mono">'+esc(p.secretCode)+'</td>'
+          + '<td><span class="copy" data-copy="'+esc(link)+'">copy link</span></td>'
+          + '</tr>';
+      }).join('')
+      + '</tbody></table></div>'
+      + '<p style="color:var(--faint);font-size:12px;font-family:var(--mono);margin-top:10px">Tip: send each agent their personal dashboard link. It opens straight to their Mark — no code typing.</p>';
+  }
+
+  $('#adminContent').innerHTML = html;
+
+  $('#adminLogout').addEventListener('click', ()=>{ adminCode=''; renderAdminGate(); });
+  $('#btnRefresh').addEventListener('click', fetchRoster);
+  $('#btnAssign').addEventListener('click', ()=> adminAction('adminAssign',
+    'Generate assignments?', 'This imports all signups from the Form Responses, shuffles everyone into one random ring, generates secret codes, and starts the game. Run once at kickoff.'));
+  $('#btnReverse').addEventListener('click', ()=> adminAction('adminReverse',
+    'Reverse the last kill?', 'Restores the most recently neutralized agent, undoes the eliminator\'s last reassignment, and removes the feed entry.'));
+  $('#btnReset').addEventListener('click', ()=> adminAction('adminReset',
+    'Reset the entire game?', 'Wipes the Players roster, the kill feed, and pending confirmations, and sets the game back to signups. The raw Form Responses are untouched. This cannot be undone.'));
+
+  $$('.copy').forEach(el=> el.addEventListener('click', ()=>{
+    const txt=el.dataset.copy;
+    navigator.clipboard && navigator.clipboard.writeText(txt).then(()=>{ const o=el.textContent; el.textContent='copied ✓'; setTimeout(()=>el.textContent=o,1200); });
+  }));
+
+  const postBtn=$('#btnPostRule');
+  if(postBtn) postBtn.addEventListener('click', async ()=>{
+    const title=$('#ruleTitle').value.trim(), text=$('#ruleText').value.trim();
+    if(!title && !text){ $('#ruleErr').textContent='Add a headline or some details first.'; return; }
+    postBtn.disabled=true; postBtn.textContent='Broadcasting…';
+    try{
+      await api('adminPostRule', { adminCode, title, text });
+      toast('Directive sent', 'Every agent has been alerted.');
+      fetchRoster();
+    }catch(e){ $('#ruleErr').textContent=e.message; postBtn.disabled=false; postBtn.innerHTML='&#10548; Broadcast to all agents'; }
+  });
+  $$('.d-remove').forEach(el=> el.addEventListener('click', async ()=>{
+    const id=el.dataset.remove; el.disabled=true; el.textContent='…';
+    try{ await api('adminRemoveRule', { adminCode, ruleId:id }); fetchRoster(); }
+    catch(e){ toast('Error', e.message); el.disabled=false; el.textContent='remove'; }
+  }));
+}
+
+function adminAction(action, title, body){
+  openModal(
+    '<h3 id="modalTitle">'+esc(title)+'</h3>'
+    + '<p style="color:var(--muted);font-size:14px;margin:6px 0 0">'+esc(body)+'</p>'
+    + '<div class="err" id="modalErr"></div>'
+    + '<div class="modal-actions"><button class="btn ghost" id="mCancel">Cancel</button>'
+    + '<button class="btn primary" id="mConfirm">Confirm</button></div>'
+  );
+  $('#mCancel').addEventListener('click', closeModal);
+  $('#mConfirm').addEventListener('click', async ()=>{
+    const btn=$('#mConfirm'); btn.disabled=true; btn.textContent='Working…';
+    try{
+      const res = await api(action, { adminCode });
+      closeModal();
+      toast('Done', action==='adminAssign'?('Network seeded — '+(res.agents||0)+' agents live.'):(action==='adminReverse'?('Restored '+(res.restored||'agent')+'.'):'Game reset.'));
+      fetchRoster();
+      // re-prime public notification detection after a reset/assign
+      lastFeedTop=null; feedPrimed=false; gameEndedShown=false;
+      seenDirectiveIds=new Set(); directivesPrimed=false;
+    }catch(e){
+      $('#modalErr').textContent = e.message;
+      btn.disabled=false; btn.textContent='Confirm';
+    }
+  });
+}
+
+/* ============================================================
+   Modal
+   ============================================================ */
+function openModal(html){
+  const m=$('#modal'); m.innerHTML=html;
+  $('#modalBg').classList.add('open');
+  document.addEventListener('keydown', escClose);
+}
+function closeModal(){ $('#modalBg').classList.remove('open'); document.removeEventListener('keydown', escClose); }
+function escClose(e){ if(e.key==='Escape') closeModal(); }
+$('#modalBg').addEventListener('click', e=>{ if(e.target===$('#modalBg')) closeModal(); });
+
+/* ============================================================
+   Winner celebration
+   ============================================================ */
+function celebrate(name){
+  toast('GAME OVER', (name||'An agent')+' is the last shadow standing.');
+  Sound.blip();
+  if(!CONFIG.features.confetti) return;
+  const colors=[getCSS('--accent'), getCSS('--accent-glow'), getCSS('--alive'), '#F4F1EA'];
+  for(let i=0;i<70;i++){
+    const c=document.createElement('div'); c.className='confetti';
+    c.style.left=Math.random()*100+'vw';
+    c.style.background=colors[i%colors.length];
+    c.style.transform='rotate('+(Math.random()*360)+'deg)';
+    document.body.appendChild(c);
+    const dur=2200+Math.random()*1800, drift=(Math.random()*2-1)*140;
+    c.animate([{transform:'translate(0,0) rotate(0)',opacity:1},{transform:'translate('+drift+'px,'+(window.innerHeight+40)+'px) rotate('+(Math.random()*720)+'deg)',opacity:.9}],{duration:dur,easing:'cubic-bezier(.2,.6,.4,1)'}).onfinish=()=>c.remove();
+  }
+}
+function getCSS(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim()||'#E0531D'; }
+
+/* ============================================================
+   Boot
+   ============================================================ */
+function start(){
+  route();
+  pollPublic();
+  if(pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(pollPublic, Math.max(4, CONFIG.pollSeconds)*1000);
+  // pause polling when tab hidden, resume on focus
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) pollPublic(); });
+}
+start();
+</script>
+</body>
+</html>
