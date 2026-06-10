@@ -292,10 +292,11 @@ footer{margin-top:50px;padding-top:20px;border-top:1px solid var(--line);color:v
     <div class="eyebrow">Edge Esmeralda · Healdsburg · The Network is live</div>
     <h1 class="hero">EDGE CITY <span class="slash">//</span> ASSASSIN</h1>
     <p class="tagline" id="heroTag">Welcome to Assassin. There are two goals of this game: be the last one standing and get out as many people as possible. On Day 1, you will receive a target. To get out your target, you need to tap them with three fingers on their wristband. If they aren't wearing a wristband, they should be, and you can tap them on their wrist. If you succeed in getting out your target, then your target's target becomes your target. (Mwah ha ha) The cycle continues until only one person (the Victor) remains. Each day, there will be a new defense mechanism for staying in the game, which we will announce in a Telegram chat that all players will be added to. So, if someone taps your wristband, but you have your defense mechanism in place, then their tap is neutralized.</p>
-    <p class="tagline">If you have questions, reach out to <a href="https://t.me/akos5111" style="color:var(--accent)">@akos5111</a> and <a href="https://t.me/juliamrobbins" style="color:var(--accent)">@juliamrobbins</a>.</p>
+    <p class="tagline">To enter the game, <a href="https://docs.google.com/forms/d/e/1FAIpQLSe5BF5ta2JK3J45LHWVBVM9hPmGa4wxD6llJxbjGs6YLfTcvQ/viewform?usp=dialog" style="color:var(--accent)">fill out the sign-up form here</a>.</p>
     <p class="tagline">All players must <a href="https://t.me/+P15iGmTbncljYmMx" style="color:var(--accent)">join the Telegram group chat</a> — this is where daily defense mechanisms and announcements will be posted.</p>
-    <p class="tagline">Let the mischief commence.</p>
     <p class="tagline"><b>IMPORTANT RULE:</b> No getting someone out during an active session and no sprinting on the streets of Healdsburg.</p>
+    <p class="tagline">Let the mischief commence.</p>
+    <p class="tagline">If you have any questions, reach out to <a href="https://t.me/akos5111" style="color:var(--accent)">@akos5111</a> and <a href="https://t.me/juliamrobbins" style="color:var(--accent)">@juliamrobbins</a>.</p>
 
     <div class="panel counter-card">
       <div>
@@ -891,6 +892,54 @@ function directivesAdminHTML(list){
     + '</div>';
 }
 
+function killLogHTML(kills){
+  kills = kills || [];
+  const items = kills.length
+    ? kills.map(function(k){
+        return '<div class="directive">'
+          + '<span class="d-flag old">KILL</span>'
+          + '<div class="d-body"><div class="d-title">'+esc(k.eliminatorCodename)+' &rarr; '+esc(k.victimCodename)+'</div>'
+          + '<div class="d-meta">'+esc(k.victimCodename)+' neutralized</div></div>'
+          + '<button class="d-remove" data-revert="'+esc(k.victimId)+'" data-name="'+esc(k.victimCodename)+'">revert</button>'
+          + '</div>';
+      }).join('')
+    : '<div class="skeleton" style="padding:10px;text-align:left">No kills logged yet.</div>';
+  return '<div class="panel" style="padding:18px;margin:18px 0">'
+    + '<div class="section-title">Elimination Log · Revert any kill</div>'
+    + '<p style="color:var(--faint);font-size:12px;font-family:var(--mono);margin:0 0 12px;line-height:1.5">Newest first. Reverting brings an agent back and rewires the ring. Kills elsewhere are kept; any later kills that only happened <i>because</i> of this one are rolled back too — you\'ll be told how many.</p>'
+    + items
+    + '</div>';
+}
+
+function confirmRevertKill(victimId, name){
+  openModal(
+    '<h3 id="modalTitle">Revert this kill?</h3>'
+    + '<p style="color:var(--muted);font-size:14px;margin:6px 0 0">Restores <b style="color:var(--text)">'+esc(name||'this agent')+'</b> to the field and recomputes everyone\'s targets, kills, and the winner.</p>'
+    + '<div class="reminder">Independent kills across the ring are kept. Any later kills that depended on this one (someone who chain-killed through <b>'+esc(name||'them')+'</b>) get rolled back too — the count is reported after.</div>'
+    + '<div class="err" id="modalErr"></div>'
+    + '<div class="modal-actions"><button class="btn ghost" id="mCancel">Cancel</button>'
+    + '<button class="btn primary" id="mConfirm">↺ Revert kill</button></div>'
+  );
+  $('#mCancel').addEventListener('click', closeModal);
+  $('#mConfirm').addEventListener('click', async ()=>{
+    const btn=$('#mConfirm'); btn.disabled=true; btn.textContent='Reverting…';
+    try{
+      const res = await api('adminRevertKill', { adminCode, victimId });
+      closeModal();
+      let msg = 'Restored '+(res.restored||'agent')+'.';
+      if(res.cascadedKills>0) msg += ' '+res.cascadedKills+' dependent kill'+(res.cascadedKills===1?'':'s')+' also rolled back.';
+      if(res.ended) msg += ' Winner: '+(res.winner||'—')+'.';
+      toast('Reverted', msg);
+      fetchRoster();
+      // re-prime public notification detection (feed/state changed underneath)
+      lastFeedTop=null; feedPrimed=false; gameEndedShown=false;
+    }catch(e){
+      $('#modalErr').textContent = e.message;
+      btn.disabled=false; btn.textContent='↺ Revert kill';
+    }
+  });
+}
+
 function renderAdmin(){
   if(!adminCode){ renderAdminGate(); return; }
   fetchRoster();
@@ -939,12 +988,12 @@ function renderRoster(d){
     + '<div class="tagline" style="font-size:14px">'+players.length+' agents · '+alive+' active'+(d.winner?' · winner: <b style="color:var(--accent)">'+esc(d.winner)+'</b>':'')+'</div>'
     + '<div class="adminbar">'
     + '<button class="btn primary" id="btnAssign">⚙ Generate Assignments (start)</button>'
-    + '<button class="btn danger" id="btnReverse">↺ Reverse Last Kill</button>'
     + '<button class="btn ghost" id="btnReset">⨯ Reset Game</button>'
     + '<button class="btn ghost" id="btnRefresh">⟳ Refresh</button>'
     + '</div>'
     + '<div class="err" id="adminMsg"></div>';
 
+  html += killLogHTML(d.kills);
   html += directivesAdminHTML(d.directives);
 
   if(!players.length){
@@ -976,8 +1025,6 @@ function renderRoster(d){
   $('#btnRefresh').addEventListener('click', fetchRoster);
   $('#btnAssign').addEventListener('click', ()=> adminAction('adminAssign',
     'Generate assignments?', 'This imports all signups from the Form Responses, shuffles everyone into one random ring, generates secret codes, and starts the game. Run once at kickoff.'));
-  $('#btnReverse').addEventListener('click', ()=> adminAction('adminReverse',
-    'Reverse the last kill?', 'Restores the most recently neutralized agent, undoes the eliminator\'s last reassignment, and removes the feed entry.'));
   $('#btnReset').addEventListener('click', ()=> adminAction('adminReset',
     'Reset the entire game?', 'Wipes the Players roster, the kill feed, and pending confirmations, and sets the game back to signups. The raw Form Responses are untouched. This cannot be undone.'));
 
@@ -985,6 +1032,8 @@ function renderRoster(d){
     const txt=el.dataset.copy;
     navigator.clipboard && navigator.clipboard.writeText(txt).then(()=>{ const o=el.textContent; el.textContent='copied ✓'; setTimeout(()=>el.textContent=o,1200); });
   }));
+
+  $$('[data-revert]').forEach(el=> el.addEventListener('click', ()=> confirmRevertKill(el.dataset.revert, el.dataset.name)));
 
   const postBtn=$('#btnPostRule');
   if(postBtn) postBtn.addEventListener('click', async ()=>{
